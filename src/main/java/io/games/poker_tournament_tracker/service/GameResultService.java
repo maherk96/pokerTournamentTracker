@@ -1,8 +1,6 @@
 package io.games.poker_tournament_tracker.service;
 
-import io.games.poker_tournament_tracker.domain.Game;
 import io.games.poker_tournament_tracker.domain.GameResult;
-import io.games.poker_tournament_tracker.domain.SeasonPlayer;
 import io.games.poker_tournament_tracker.model.GameResultDTO;
 import io.games.poker_tournament_tracker.repos.GameRepository;
 import io.games.poker_tournament_tracker.repos.GameResultRepository;
@@ -10,8 +8,7 @@ import io.games.poker_tournament_tracker.repos.SeasonPlayerRepository;
 import io.games.poker_tournament_tracker.util.NotFoundException;
 import java.math.BigDecimal;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -19,16 +16,28 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Service class for managing Game Results. */
 @Service
+@Slf4j
 public class GameResultService {
 
-  private static final Logger logger = LoggerFactory.getLogger(GameResultService.class);
+  private final GameResultRepository gameResultRepository;
+  private final GameRepository gameRepository;
+  private final SeasonPlayerRepository seasonPlayerRepository;
+  private final GameService gameService;
+  private final SeasonPlayerService seasonPlayerService;
 
-  @Autowired private GameResultRepository gameResultRepository;
-  @Autowired private GameRepository gameRepository;
-  @Autowired private SeasonPlayerRepository seasonPlayerRepository;
-  @Autowired private GameService gameService;
-  @Autowired private SeasonPlayerService seasonPlayerService;
-  @Autowired private GameResultService gameResultService;
+  @Autowired
+  public GameResultService(
+      GameResultRepository gameResultRepository,
+      GameRepository gameRepository,
+      SeasonPlayerRepository seasonPlayerRepository,
+      GameService gameService,
+      SeasonPlayerService seasonPlayerService) {
+    this.gameResultRepository = gameResultRepository;
+    this.gameRepository = gameRepository;
+    this.seasonPlayerRepository = seasonPlayerRepository;
+    this.gameService = gameService;
+    this.seasonPlayerService = seasonPlayerService;
+  }
 
   /**
    * Retrieves all GameResultDTOs.
@@ -36,16 +45,9 @@ public class GameResultService {
    * @return a list of GameResultDTOs
    */
   public List<GameResultDTO> findAll() {
-    try {
-      logger.info("Retrieving all game results");
-      final List<GameResult> gameResults = gameResultRepository.findAll(Sort.by("gameResultId"));
-      return gameResults.stream()
-          .map(gameResult -> mapToDTO(gameResult, new GameResultDTO()))
-          .toList();
-    } catch (Exception e) {
-      logger.error("Error finding all game results", e);
-      throw e;
-    }
+    log.info("Retrieving all game results");
+    List<GameResult> gameResults = gameResultRepository.findAll(Sort.by("gameResultId"));
+    return gameResults.stream().map(this::mapToDTO).toList();
   }
 
   /**
@@ -55,19 +57,11 @@ public class GameResultService {
    * @return the GameResultDTO
    */
   public GameResultDTO get(final Integer gameResultId) {
-    try {
-      logger.info("Retrieving game result with id: {}", gameResultId);
-      return gameResultRepository
-          .findById(gameResultId)
-          .map(gameResult -> mapToDTO(gameResult, new GameResultDTO()))
-          .orElseThrow(NotFoundException::new);
-    } catch (NotFoundException e) {
-      logger.warn("Game result not found with id: {}", gameResultId, e);
-      throw e;
-    } catch (Exception e) {
-      logger.error("Error getting game result with id: {}", gameResultId, e);
-      throw e;
-    }
+    log.info("Retrieving game result with id: {}", gameResultId);
+    return gameResultRepository
+        .findById(gameResultId)
+        .map(this::mapToDTO)
+        .orElseThrow(() -> new NotFoundException("Game result not found"));
   }
 
   /**
@@ -78,15 +72,10 @@ public class GameResultService {
    */
   @Transactional
   public Integer create(final GameResultDTO gameResultDTO) {
-    try {
-      logger.info("Creating new game result");
-      final GameResult gameResult = new GameResult();
-      mapToEntity(gameResultDTO, gameResult);
-      return gameResultRepository.save(gameResult).getGameResultId();
-    } catch (Exception e) {
-      logger.error("Error creating game result", e);
-      throw e;
-    }
+    log.info("Creating new game result");
+    GameResult gameResult = new GameResult();
+    mapToEntity(gameResultDTO, gameResult);
+    return gameResultRepository.save(gameResult).getGameResultId();
   }
 
   /**
@@ -97,19 +86,13 @@ public class GameResultService {
    */
   @Transactional
   public void update(final Integer gameResultId, final GameResultDTO gameResultDTO) {
-    try {
-      logger.info("Updating game result with id: {}", gameResultId);
-      final GameResult gameResult =
-          gameResultRepository.findById(gameResultId).orElseThrow(NotFoundException::new);
-      mapToEntity(gameResultDTO, gameResult);
-      gameResultRepository.save(gameResult);
-    } catch (NotFoundException e) {
-      logger.warn("Game result not found with id: {}", gameResultId, e);
-      throw e;
-    } catch (Exception e) {
-      logger.error("Error updating game result with id: {}", gameResultId, e);
-      throw e;
-    }
+    log.info("Updating game result with id: {}", gameResultId);
+    GameResult gameResult =
+        gameResultRepository
+            .findById(gameResultId)
+            .orElseThrow(() -> new NotFoundException("Game result not found"));
+    mapToEntity(gameResultDTO, gameResult);
+    gameResultRepository.save(gameResult);
   }
 
   /**
@@ -119,23 +102,18 @@ public class GameResultService {
    */
   @Transactional
   public void delete(final Integer gameResultId) {
-    try {
-      logger.info("Deleting game result with id: {}", gameResultId);
-      gameResultRepository.deleteById(gameResultId);
-    } catch (Exception e) {
-      logger.error("Error deleting game result with id: {}", gameResultId, e);
-      throw e;
-    }
+    log.info("Deleting game result with id: {}", gameResultId);
+    gameResultRepository.deleteById(gameResultId);
   }
 
   /**
    * Maps a GameResult entity to a GameResultDTO.
    *
    * @param gameResult the GameResult entity
-   * @param gameResultDTO the GameResultDTO
    * @return the mapped GameResultDTO
    */
-  private GameResultDTO mapToDTO(final GameResult gameResult, final GameResultDTO gameResultDTO) {
+  private GameResultDTO mapToDTO(final GameResult gameResult) {
+    GameResultDTO gameResultDTO = new GameResultDTO();
     gameResultDTO.setGameResultId(gameResult.getGameResultId());
     gameResultDTO.setWinnings(gameResult.getWinnings());
     gameResultDTO.setGame(gameResult.getGame() == null ? null : gameResult.getGame().getGameId());
@@ -151,25 +129,21 @@ public class GameResultService {
    *
    * @param gameResultDTO the GameResultDTO
    * @param gameResult the GameResult entity
-   * @return the mapped GameResult entity
    */
-  private GameResult mapToEntity(final GameResultDTO gameResultDTO, final GameResult gameResult) {
+  private void mapToEntity(final GameResultDTO gameResultDTO, final GameResult gameResult) {
     gameResult.setWinnings(gameResultDTO.getWinnings());
-    final Game game =
+    gameResult.setGame(
         gameResultDTO.getGame() == null
             ? null
             : gameRepository
                 .findById(gameResultDTO.getGame())
-                .orElseThrow(() -> new NotFoundException("game not found"));
-    gameResult.setGame(game);
-    final SeasonPlayer seasonPlayer =
+                .orElseThrow(() -> new NotFoundException("Game not found")));
+    gameResult.setSeasonPlayer(
         gameResultDTO.getSeasonPlayer() == null
             ? null
             : seasonPlayerRepository
                 .findById(gameResultDTO.getSeasonPlayer())
-                .orElseThrow(() -> new NotFoundException("seasonPlayer not found"));
-    gameResult.setSeasonPlayer(seasonPlayer);
-    return gameResult;
+                .orElseThrow(() -> new NotFoundException("Season player not found")));
   }
 
   /**
@@ -182,8 +156,7 @@ public class GameResultService {
   @Transactional
   public void createGameResult(int gameNumber, String playerName, double winnings) {
     try {
-      logger.info(
-          "Creating game result for game number: {}, player name: {}", gameNumber, playerName);
+      log.info("Creating game result for game number: {}, player name: {}", gameNumber, playerName);
       GameResultDTO gameResultDTO = new GameResultDTO();
       gameResultDTO.setGame(gameService.getGameId(gameNumber));
       Integer seasonIdByGameNumber = gameService.getSeasonIdByGameNumber(gameNumber);
@@ -191,14 +164,14 @@ public class GameResultService {
           seasonPlayerService.getSeasonPlayerIdByPlayerNameAndSeasonId(
               playerName, seasonIdByGameNumber));
       gameResultDTO.setWinnings(BigDecimal.valueOf(winnings));
-      gameResultService.create(gameResultDTO);
+      create(gameResultDTO);
     } catch (Exception e) {
-      logger.error(
+      log.error(
           "Error creating game result for game number: {}, player name: {}",
           gameNumber,
           playerName,
           e);
-      throw e;
+      throw new RuntimeException("Error creating game result", e);
     }
   }
 }

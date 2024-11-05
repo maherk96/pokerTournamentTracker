@@ -9,8 +9,7 @@ import io.games.poker_tournament_tracker.repos.PlayerParticipationRepository;
 import io.games.poker_tournament_tracker.repos.SeasonPlayerRepository;
 import io.games.poker_tournament_tracker.util.NotFoundException;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -18,16 +17,28 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Service class for managing Player Participations. */
 @Service
+@Slf4j
 public class PlayerParticipationService {
 
-  private static final Logger logger = LoggerFactory.getLogger(PlayerParticipationService.class);
+  private final PlayerParticipationRepository playerParticipationRepository;
+  private final GameRepository gameRepository;
+  private final SeasonPlayerRepository seasonPlayerRepository;
+  private final SeasonPlayerService seasonPlayerService;
+  private final GameService gameService;
 
-  @Autowired private PlayerParticipationRepository playerParticipationRepository;
-  @Autowired private GameRepository gameRepository;
-  @Autowired private SeasonPlayerRepository seasonPlayerRepository;
-  @Autowired private SeasonPlayerService seasonPlayerService;
-  @Autowired private GameService gameService;
-  @Autowired private PlayerParticipationService playerParticipationService;
+  @Autowired
+  public PlayerParticipationService(
+      PlayerParticipationRepository playerParticipationRepository,
+      GameRepository gameRepository,
+      SeasonPlayerRepository seasonPlayerRepository,
+      SeasonPlayerService seasonPlayerService,
+      GameService gameService) {
+    this.playerParticipationRepository = playerParticipationRepository;
+    this.gameRepository = gameRepository;
+    this.seasonPlayerRepository = seasonPlayerRepository;
+    this.seasonPlayerService = seasonPlayerService;
+    this.gameService = gameService;
+  }
 
   /**
    * Retrieves all PlayerParticipationDTOs.
@@ -36,15 +47,15 @@ public class PlayerParticipationService {
    */
   public List<PlayerParticipationDTO> findAll() {
     try {
-      logger.info("Retrieving all player participations");
+      log.info("Retrieving all player participations");
       final List<PlayerParticipation> playerParticipations =
           playerParticipationRepository.findAll(Sort.by("participationId"));
       return playerParticipations.stream()
           .map(playerParticipation -> mapToDTO(playerParticipation, new PlayerParticipationDTO()))
           .toList();
     } catch (Exception e) {
-      logger.error("Error finding all player participations", e);
-      throw e;
+      log.error("Error finding all player participations", e);
+      throw new RuntimeException("Failed to retrieve all player participations", e);
     }
   }
 
@@ -56,17 +67,18 @@ public class PlayerParticipationService {
    */
   public PlayerParticipationDTO get(final Integer participationId) {
     try {
-      logger.info("Retrieving player participation with id: {}", participationId);
+      log.info("Retrieving player participation with id: {}", participationId);
       return playerParticipationRepository
           .findById(participationId)
           .map(playerParticipation -> mapToDTO(playerParticipation, new PlayerParticipationDTO()))
-          .orElseThrow(NotFoundException::new);
-    } catch (NotFoundException e) {
-      logger.warn("Player participation not found with id: {}", participationId, e);
-      throw e;
+          .orElseThrow(
+              () ->
+                  new NotFoundException(
+                      "Player participation not found with id: " + participationId));
     } catch (Exception e) {
-      logger.error("Error getting player participation with id: {}", participationId, e);
-      throw e;
+      log.error("Error getting player participation with id: {}", participationId, e);
+      throw new RuntimeException(
+          "Failed to retrieve player participation with id: " + participationId, e);
     }
   }
 
@@ -79,13 +91,13 @@ public class PlayerParticipationService {
   @Transactional
   public Integer create(final PlayerParticipationDTO playerParticipationDTO) {
     try {
-      logger.info("Creating new player participation");
+      log.info("Creating new player participation");
       final PlayerParticipation playerParticipation = new PlayerParticipation();
       mapToEntity(playerParticipationDTO, playerParticipation);
       return playerParticipationRepository.save(playerParticipation).getParticipationId();
     } catch (Exception e) {
-      logger.error("Error creating player participation", e);
-      throw e;
+      log.error("Error creating player participation", e);
+      throw new RuntimeException("Failed to create player participation", e);
     }
   }
 
@@ -99,19 +111,20 @@ public class PlayerParticipationService {
   public void update(
       final Integer participationId, final PlayerParticipationDTO playerParticipationDTO) {
     try {
-      logger.info("Updating player participation with id: {}", participationId);
+      log.info("Updating player participation with id: {}", participationId);
       final PlayerParticipation playerParticipation =
           playerParticipationRepository
               .findById(participationId)
-              .orElseThrow(NotFoundException::new);
+              .orElseThrow(
+                  () ->
+                      new NotFoundException(
+                          "Player participation not found with id: " + participationId));
       mapToEntity(playerParticipationDTO, playerParticipation);
       playerParticipationRepository.save(playerParticipation);
-    } catch (NotFoundException e) {
-      logger.warn("Player participation not found with id: {}", participationId, e);
-      throw e;
     } catch (Exception e) {
-      logger.error("Error updating player participation with id: {}", participationId, e);
-      throw e;
+      log.error("Error updating player participation with id: {}", participationId, e);
+      throw new RuntimeException(
+          "Failed to update player participation with id: " + participationId, e);
     }
   }
 
@@ -123,11 +136,12 @@ public class PlayerParticipationService {
   @Transactional
   public void delete(final Integer participationId) {
     try {
-      logger.info("Deleting player participation with id: {}", participationId);
+      log.info("Deleting player participation with id: {}", participationId);
       playerParticipationRepository.deleteById(participationId);
     } catch (Exception e) {
-      logger.error("Error deleting player participation with id: {}", participationId, e);
-      throw e;
+      log.error("Error deleting player participation with id: {}", participationId, e);
+      throw new RuntimeException(
+          "Failed to delete player participation with id: " + participationId, e);
     }
   }
 
@@ -170,14 +184,21 @@ public class PlayerParticipationService {
             ? null
             : gameRepository
                 .findById(playerParticipationDTO.getGame())
-                .orElseThrow(() -> new NotFoundException("game not found"));
+                .orElseThrow(
+                    () ->
+                        new NotFoundException(
+                            "Game not found with id: " + playerParticipationDTO.getGame()));
     playerParticipation.setGame(game);
     final SeasonPlayer seasonPlayer =
         playerParticipationDTO.getSeasonPlayer() == null
             ? null
             : seasonPlayerRepository
                 .findById(playerParticipationDTO.getSeasonPlayer())
-                .orElseThrow(() -> new NotFoundException("seasonPlayer not found"));
+                .orElseThrow(
+                    () ->
+                        new NotFoundException(
+                            "Season player not found with id: "
+                                + playerParticipationDTO.getSeasonPlayer()));
     playerParticipation.setSeasonPlayer(seasonPlayer);
     return playerParticipation;
   }
@@ -195,7 +216,7 @@ public class PlayerParticipationService {
       io.games.poker_tournament_tracker.service.impl.PlayerParticipation playerParticipation,
       int gameNumber) {
     try {
-      logger.info(
+      log.info(
           "Creating player participation for player: {}, game number: {}", playerName, gameNumber);
       PlayerParticipationDTO playerParticipationDTO = new PlayerParticipationDTO();
       playerParticipationDTO.setSeasonPlayer(
@@ -205,14 +226,19 @@ public class PlayerParticipationService {
       playerParticipationDTO.setParticipated(
           playerParticipation.equals(
               io.games.poker_tournament_tracker.service.impl.PlayerParticipation.YES));
-      playerParticipationService.create(playerParticipationDTO);
+      create(playerParticipationDTO);
     } catch (Exception e) {
-      logger.error(
+      log.error(
           "Error creating player participation for player: {}, game number: {}",
           playerName,
           gameNumber,
           e);
-      throw e;
+      throw new RuntimeException(
+          "Failed to create player participation for player: "
+              + playerName
+              + ", game number: "
+              + gameNumber,
+          e);
     }
   }
 }

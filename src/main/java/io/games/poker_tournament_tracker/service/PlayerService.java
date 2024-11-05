@@ -8,8 +8,7 @@ import io.games.poker_tournament_tracker.repos.SeasonPlayerRepository;
 import io.games.poker_tournament_tracker.util.NotFoundException;
 import io.games.poker_tournament_tracker.util.ReferencedWarning;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -17,12 +16,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Service class for managing Players. */
 @Service
+@Slf4j
 public class PlayerService {
 
-  private static final Logger logger = LoggerFactory.getLogger(PlayerService.class);
+  private final PlayerRepository playerRepository;
+  private final SeasonPlayerRepository seasonPlayerRepository;
 
-  @Autowired private PlayerRepository playerRepository;
-  @Autowired private SeasonPlayerRepository seasonPlayerRepository;
+  @Autowired
+  public PlayerService(
+      PlayerRepository playerRepository, SeasonPlayerRepository seasonPlayerRepository) {
+    this.playerRepository = playerRepository;
+    this.seasonPlayerRepository = seasonPlayerRepository;
+  }
 
   /**
    * Retrieves all PlayerDTOs.
@@ -31,12 +36,12 @@ public class PlayerService {
    */
   public List<PlayerDTO> findAll() {
     try {
-      logger.info("Retrieving all players");
+      log.info("Retrieving all players");
       final List<Player> players = playerRepository.findAll(Sort.by("playerId"));
       return players.stream().map(player -> mapToDTO(player, new PlayerDTO())).toList();
     } catch (Exception e) {
-      logger.error("Error finding all players", e);
-      throw e;
+      log.error("Error finding all players", e);
+      throw new RuntimeException("Failed to retrieve all players", e);
     }
   }
 
@@ -48,11 +53,11 @@ public class PlayerService {
    */
   public int getPlayerIdByName(String name) {
     try {
-      logger.info("Retrieving player ID for name: {}", name);
+      log.info("Retrieving player ID for name: {}", name);
       return playerRepository.findPlayerIdByName(name);
     } catch (Exception e) {
-      logger.error("Error retrieving player ID for name: {}", name, e);
-      throw e;
+      log.error("Error retrieving player ID for name: {}", name, e);
+      throw new RuntimeException("Failed to retrieve player ID for name: " + name, e);
     }
   }
 
@@ -64,7 +69,7 @@ public class PlayerService {
    */
   public Integer getOrCreatePlayerIdByName(String name) {
     try {
-      logger.info("Retrieving or creating player ID for name: {}", name);
+      log.info("Retrieving or creating player ID for name: {}", name);
       List<Player> players = playerRepository.findAll();
       return players.stream()
           .filter(player -> player.getName().equals(name))
@@ -75,12 +80,12 @@ public class PlayerService {
                 PlayerDTO newPlayer = new PlayerDTO();
                 newPlayer.setName(name);
                 Integer playerId = create(newPlayer);
-                logger.info("Created new player with ID: {}", playerId);
+                log.info("Created new player with ID: {}", playerId);
                 return playerId;
               });
     } catch (Exception e) {
-      logger.error("Error retrieving or creating player ID for name: {}", name, e);
-      throw e;
+      log.error("Error retrieving or creating player ID for name: {}", name, e);
+      throw new RuntimeException("Failed to retrieve or create player ID for name: " + name, e);
     }
   }
 
@@ -92,17 +97,14 @@ public class PlayerService {
    */
   public PlayerDTO get(final Integer playerId) {
     try {
-      logger.info("Retrieving player with id: {}", playerId);
+      log.info("Retrieving player with id: {}", playerId);
       return playerRepository
           .findById(playerId)
           .map(player -> mapToDTO(player, new PlayerDTO()))
-          .orElseThrow(NotFoundException::new);
-    } catch (NotFoundException e) {
-      logger.warn("Player not found with id: {}", playerId, e);
-      throw e;
+          .orElseThrow(() -> new NotFoundException("Player not found with id: " + playerId));
     } catch (Exception e) {
-      logger.error("Error getting player with id: {}", playerId, e);
-      throw e;
+      log.error("Error getting player with id: {}", playerId, e);
+      throw new RuntimeException("Failed to retrieve player with id: " + playerId, e);
     }
   }
 
@@ -115,13 +117,13 @@ public class PlayerService {
   @Transactional
   public Integer create(final PlayerDTO playerDTO) {
     try {
-      logger.info("Creating new player");
+      log.info("Creating new player");
       final Player player = new Player();
       mapToEntity(playerDTO, player);
       return playerRepository.save(player).getPlayerId();
     } catch (Exception e) {
-      logger.error("Error creating player", e);
-      throw e;
+      log.error("Error creating player", e);
+      throw new RuntimeException("Failed to create player", e);
     }
   }
 
@@ -134,16 +136,16 @@ public class PlayerService {
   @Transactional
   public void update(final Integer playerId, final PlayerDTO playerDTO) {
     try {
-      logger.info("Updating player with id: {}", playerId);
-      final Player player = playerRepository.findById(playerId).orElseThrow(NotFoundException::new);
+      log.info("Updating player with id: {}", playerId);
+      final Player player =
+          playerRepository
+              .findById(playerId)
+              .orElseThrow(() -> new NotFoundException("Player not found with id: " + playerId));
       mapToEntity(playerDTO, player);
       playerRepository.save(player);
-    } catch (NotFoundException e) {
-      logger.warn("Player not found with id: {}", playerId, e);
-      throw e;
     } catch (Exception e) {
-      logger.error("Error updating player with id: {}", playerId, e);
-      throw e;
+      log.error("Error updating player with id: {}", playerId, e);
+      throw new RuntimeException("Failed to update player with id: " + playerId, e);
     }
   }
 
@@ -155,11 +157,11 @@ public class PlayerService {
   @Transactional
   public void delete(final Integer playerId) {
     try {
-      logger.info("Deleting player with id: {}", playerId);
+      log.info("Deleting player with id: {}", playerId);
       playerRepository.deleteById(playerId);
     } catch (Exception e) {
-      logger.error("Error deleting player with id: {}", playerId, e);
-      throw e;
+      log.error("Error deleting player with id: {}", playerId, e);
+      throw new RuntimeException("Failed to delete player with id: " + playerId, e);
     }
   }
 
@@ -198,9 +200,12 @@ public class PlayerService {
    */
   public ReferencedWarning getReferencedWarning(final Integer playerId) {
     try {
-      logger.info("Retrieving referenced warning for player with id: {}", playerId);
+      log.info("Retrieving referenced warning for player with id: {}", playerId);
       final ReferencedWarning referencedWarning = new ReferencedWarning();
-      final Player player = playerRepository.findById(playerId).orElseThrow(NotFoundException::new);
+      final Player player =
+          playerRepository
+              .findById(playerId)
+              .orElseThrow(() -> new NotFoundException("Player not found with id: " + playerId));
       final SeasonPlayer playerSeasonPlayer = seasonPlayerRepository.findFirstByPlayer(player);
       if (playerSeasonPlayer != null) {
         referencedWarning.setKey("player.seasonPlayer.player.referenced");
@@ -209,8 +214,9 @@ public class PlayerService {
       }
       return null;
     } catch (Exception e) {
-      logger.error("Error retrievin   g referenced warning for player with id: {}", playerId, e);
-      throw e;
+      log.error("Error retrieving referenced warning for player with id: {}", playerId, e);
+      throw new RuntimeException(
+          "Failed to retrieve referenced warning for player with id: " + playerId, e);
     }
   }
 }

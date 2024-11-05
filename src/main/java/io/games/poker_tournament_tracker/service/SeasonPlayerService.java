@@ -17,8 +17,7 @@ import io.games.poker_tournament_tracker.util.NotFoundException;
 import io.games.poker_tournament_tracker.util.ReferencedWarning;
 import java.math.BigDecimal;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -26,19 +25,37 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Service class for managing Season Players. */
 @Service
+@Slf4j
 public class SeasonPlayerService {
 
-  private static final Logger logger = LoggerFactory.getLogger(SeasonPlayerService.class);
+  private final SeasonPlayerRepository seasonPlayerRepository;
+  private final SeasonRepository seasonRepository;
+  private final PlayerRepository playerRepository;
+  private final GameBuyInRepository gameBuyInRepository;
+  private final GameResultRepository gameResultRepository;
+  private final PlayerParticipationRepository playerParticipationRepository;
+  private final SeasonService seasonService;
+  private final PlayerService playerService;
 
-  @Autowired private SeasonPlayerRepository seasonPlayerRepository;
-  @Autowired private SeasonRepository seasonRepository;
-  @Autowired private PlayerRepository playerRepository;
-  @Autowired private GameBuyInRepository gameBuyInRepository;
-  @Autowired private GameResultRepository gameResultRepository;
-  @Autowired private PlayerParticipationRepository playerParticipationRepository;
-  @Autowired private SeasonPlayerService seasonPlayerService;
-  @Autowired private SeasonService seasonService;
-  @Autowired private PlayerService playerService;
+  @Autowired
+  public SeasonPlayerService(
+      SeasonPlayerRepository seasonPlayerRepository,
+      SeasonRepository seasonRepository,
+      PlayerRepository playerRepository,
+      GameBuyInRepository gameBuyInRepository,
+      GameResultRepository gameResultRepository,
+      PlayerParticipationRepository playerParticipationRepository,
+      SeasonService seasonService,
+      PlayerService playerService) {
+    this.seasonPlayerRepository = seasonPlayerRepository;
+    this.seasonRepository = seasonRepository;
+    this.playerRepository = playerRepository;
+    this.gameBuyInRepository = gameBuyInRepository;
+    this.gameResultRepository = gameResultRepository;
+    this.playerParticipationRepository = playerParticipationRepository;
+    this.seasonService = seasonService;
+    this.playerService = playerService;
+  }
 
   /**
    * Retrieves all SeasonPlayerDTOs.
@@ -47,15 +64,15 @@ public class SeasonPlayerService {
    */
   public List<SeasonPlayerDTO> findAll() {
     try {
-      logger.info("Retrieving all season players");
+      log.info("Retrieving all season players");
       final List<SeasonPlayer> seasonPlayers =
           seasonPlayerRepository.findAll(Sort.by("seasonPlayerId"));
       return seasonPlayers.stream()
           .map(seasonPlayer -> mapToDTO(seasonPlayer, new SeasonPlayerDTO()))
           .toList();
     } catch (Exception e) {
-      logger.error("Error finding all season players", e);
-      throw e;
+      log.error("Error finding all season players", e);
+      throw new RuntimeException("Failed to retrieve all season players", e);
     }
   }
 
@@ -67,17 +84,15 @@ public class SeasonPlayerService {
    */
   public SeasonPlayerDTO get(final Integer seasonPlayerId) {
     try {
-      logger.info("Retrieving season player with id: {}", seasonPlayerId);
+      log.info("Retrieving season player with id: {}", seasonPlayerId);
       return seasonPlayerRepository
           .findById(seasonPlayerId)
           .map(seasonPlayer -> mapToDTO(seasonPlayer, new SeasonPlayerDTO()))
-          .orElseThrow(NotFoundException::new);
-    } catch (NotFoundException e) {
-      logger.warn("Season player not found with id: {}", seasonPlayerId, e);
-      throw e;
+          .orElseThrow(
+              () -> new NotFoundException("Season player not found with id: " + seasonPlayerId));
     } catch (Exception e) {
-      logger.error("Error getting season player with id: {}", seasonPlayerId, e);
-      throw e;
+      log.error("Error getting season player with id: {}", seasonPlayerId, e);
+      throw new RuntimeException("Failed to retrieve season player with id: " + seasonPlayerId, e);
     }
   }
 
@@ -90,13 +105,13 @@ public class SeasonPlayerService {
   @Transactional
   public Integer create(final SeasonPlayerDTO seasonPlayerDTO) {
     try {
-      logger.info("Creating new season player");
+      log.info("Creating new season player");
       final SeasonPlayer seasonPlayer = new SeasonPlayer();
       mapToEntity(seasonPlayerDTO, seasonPlayer);
       return seasonPlayerRepository.save(seasonPlayer).getSeasonPlayerId();
     } catch (Exception e) {
-      logger.error("Error creating season player", e);
-      throw e;
+      log.error("Error creating season player", e);
+      throw new RuntimeException("Failed to create season player", e);
     }
   }
 
@@ -109,17 +124,18 @@ public class SeasonPlayerService {
   @Transactional
   public void update(final Integer seasonPlayerId, final SeasonPlayerDTO seasonPlayerDTO) {
     try {
-      logger.info("Updating season player with id: {}", seasonPlayerId);
+      log.info("Updating season player with id: {}", seasonPlayerId);
       final SeasonPlayer seasonPlayer =
-          seasonPlayerRepository.findById(seasonPlayerId).orElseThrow(NotFoundException::new);
+          seasonPlayerRepository
+              .findById(seasonPlayerId)
+              .orElseThrow(
+                  () ->
+                      new NotFoundException("Season player not found with id: " + seasonPlayerId));
       mapToEntity(seasonPlayerDTO, seasonPlayer);
       seasonPlayerRepository.save(seasonPlayer);
-    } catch (NotFoundException e) {
-      logger.warn("Season player not found with id: {}", seasonPlayerId, e);
-      throw e;
     } catch (Exception e) {
-      logger.error("Error updating season player with id: {}", seasonPlayerId, e);
-      throw e;
+      log.error("Error updating season player with id: {}", seasonPlayerId, e);
+      throw new RuntimeException("Failed to update season player with id: " + seasonPlayerId, e);
     }
   }
 
@@ -131,11 +147,11 @@ public class SeasonPlayerService {
   @Transactional
   public void delete(final Integer seasonPlayerId) {
     try {
-      logger.info("Deleting season player with id: {}", seasonPlayerId);
+      log.info("Deleting season player with id: {}", seasonPlayerId);
       seasonPlayerRepository.deleteById(seasonPlayerId);
     } catch (Exception e) {
-      logger.error("Error deleting season player with id: {}", seasonPlayerId, e);
-      throw e;
+      log.error("Error deleting season player with id: {}", seasonPlayerId, e);
+      throw new RuntimeException("Failed to delete season player with id: " + seasonPlayerId, e);
     }
   }
 
@@ -176,14 +192,14 @@ public class SeasonPlayerService {
             ? null
             : seasonRepository
                 .findById(seasonPlayerDTO.getSeason())
-                .orElseThrow(() -> new NotFoundException("season not found"));
+                .orElseThrow(() -> new NotFoundException("Season not found"));
     seasonPlayer.setSeason(season);
     final Player player =
         seasonPlayerDTO.getPlayer() == null
             ? null
             : playerRepository
                 .findById(seasonPlayerDTO.getPlayer())
-                .orElseThrow(() -> new NotFoundException("player not found"));
+                .orElseThrow(() -> new NotFoundException("Player not found"));
     seasonPlayer.setPlayer(player);
     return seasonPlayer;
   }
@@ -197,7 +213,7 @@ public class SeasonPlayerService {
    */
   public Integer getSeasonPlayerIdByPlayerNameAndSeasonId(String playerName, Integer seasonId) {
     try {
-      logger.info(
+      log.info(
           "Retrieving season player ID for player name: {} and season ID: {}",
           playerName,
           seasonId);
@@ -215,12 +231,17 @@ public class SeasonPlayerService {
               .orElseThrow(() -> new NotFoundException("Season player not found"));
       return seasonPlayer.getSeasonPlayerId();
     } catch (Exception e) {
-      logger.error(
+      log.error(
           "Error retrieving season player ID for player name: {} and season ID: {}",
           playerName,
           seasonId,
           e);
-      throw e;
+      throw new RuntimeException(
+          "Failed to retrieve season player ID for player name: "
+              + playerName
+              + " and season ID: "
+              + seasonId,
+          e);
     }
   }
 
@@ -236,7 +257,7 @@ public class SeasonPlayerService {
   public void createSeasonPlayers(
       String seasonName, String playerName, Double minBuyIn, Double allocatedPotSize) {
     try {
-      logger.info("Creating season player for season: {}, player: {}", seasonName, playerName);
+      log.info("Creating season player for season: {}, player: {}", seasonName, playerName);
       var seasonPlayerDTO = new SeasonPlayerDTO();
       seasonPlayerDTO.setSeason(seasonService.getSeasonIdByName(seasonName));
       var playerId = playerService.getOrCreatePlayerIdByName(playerName);
@@ -244,11 +265,13 @@ public class SeasonPlayerService {
       seasonPlayerDTO.setMinBuyIn(BigDecimal.valueOf(minBuyIn));
       seasonPlayerDTO.setAllocatedPotSize(BigDecimal.valueOf(allocatedPotSize));
       seasonPlayerDTO.setCurrentPotSize(BigDecimal.valueOf(allocatedPotSize));
-      seasonPlayerService.create(seasonPlayerDTO);
+      create(seasonPlayerDTO);
     } catch (Exception e) {
-      logger.error(
+      log.error(
           "Error creating season player for season: {}, player: {}", seasonName, playerName, e);
-      throw e;
+      throw new RuntimeException(
+          "Failed to create season player for season: " + seasonName + ", player: " + playerName,
+          e);
     }
   }
 
@@ -260,10 +283,14 @@ public class SeasonPlayerService {
    */
   public ReferencedWarning getReferencedWarning(final Integer seasonPlayerId) {
     try {
-      logger.info("Retrieving referenced warning for season player with id: {}", seasonPlayerId);
+      log.info("Retrieving referenced warning for season player with id: {}", seasonPlayerId);
       final ReferencedWarning referencedWarning = new ReferencedWarning();
       final SeasonPlayer seasonPlayer =
-          seasonPlayerRepository.findById(seasonPlayerId).orElseThrow(NotFoundException::new);
+          seasonPlayerRepository
+              .findById(seasonPlayerId)
+              .orElseThrow(
+                  () ->
+                      new NotFoundException("Season player not found with id: " + seasonPlayerId));
       final GameBuyIn seasonPlayerGameBuyIn =
           gameBuyInRepository.findFirstBySeasonPlayer(seasonPlayer);
       if (seasonPlayerGameBuyIn != null) {
@@ -287,9 +314,10 @@ public class SeasonPlayerService {
       }
       return null;
     } catch (Exception e) {
-      logger.error(
+      log.error(
           "Error retrieving referenced warning for season player with id: {}", seasonPlayerId, e);
-      throw e;
+      throw new RuntimeException(
+          "Failed to retrieve referenced warning for season player with id: " + seasonPlayerId, e);
     }
   }
 }

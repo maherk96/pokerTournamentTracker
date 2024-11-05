@@ -11,8 +11,7 @@ import io.games.poker_tournament_tracker.util.NotFoundException;
 import io.games.poker_tournament_tracker.util.ReferencedWarning;
 import java.time.LocalDate;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -20,13 +19,22 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Service class for managing Seasons. */
 @Service
+@Slf4j
 public class SeasonService {
 
-  private static final Logger logger = LoggerFactory.getLogger(SeasonService.class);
+  private final SeasonRepository seasonRepository;
+  private final SeasonPlayerRepository seasonPlayerRepository;
+  private final GameRepository gameRepository;
 
-  @Autowired private SeasonRepository seasonRepository;
-  @Autowired private SeasonPlayerRepository seasonPlayerRepository;
-  @Autowired private GameRepository gameRepository;
+  @Autowired
+  public SeasonService(
+      SeasonRepository seasonRepository,
+      SeasonPlayerRepository seasonPlayerRepository,
+      GameRepository gameRepository) {
+    this.seasonRepository = seasonRepository;
+    this.seasonPlayerRepository = seasonPlayerRepository;
+    this.gameRepository = gameRepository;
+  }
 
   /**
    * Retrieves all SeasonDTOs.
@@ -35,12 +43,12 @@ public class SeasonService {
    */
   public List<SeasonDTO> findAll() {
     try {
-      logger.info("Retrieving all seasons");
+      log.info("Retrieving all seasons");
       final List<Season> seasons = seasonRepository.findAll(Sort.by("seasonId"));
       return seasons.stream().map(season -> mapToDTO(season, new SeasonDTO())).toList();
     } catch (Exception e) {
-      logger.error("Error finding all seasons", e);
-      throw e;
+      log.error("Error finding all seasons", e);
+      throw new RuntimeException("Failed to retrieve all seasons", e);
     }
   }
 
@@ -52,11 +60,11 @@ public class SeasonService {
    */
   public int getSeasonIdByName(String name) {
     try {
-      logger.info("Retrieving season ID for name: {}", name);
+      log.info("Retrieving season ID for name: {}", name);
       return seasonRepository.findSeasonIdByName(name);
     } catch (Exception e) {
-      logger.error("Error retrieving season ID for name: {}", name, e);
-      throw e;
+      log.error("Error retrieving season ID for name: {}", name, e);
+      throw new RuntimeException("Failed to retrieve season ID for name: " + name, e);
     }
   }
 
@@ -68,17 +76,14 @@ public class SeasonService {
    */
   public SeasonDTO get(final Integer seasonId) {
     try {
-      logger.info("Retrieving season with id: {}", seasonId);
+      log.info("Retrieving season with id: {}", seasonId);
       return seasonRepository
           .findById(seasonId)
           .map(season -> mapToDTO(season, new SeasonDTO()))
-          .orElseThrow(NotFoundException::new);
-    } catch (NotFoundException e) {
-      logger.warn("Season not found with id: {}", seasonId, e);
-      throw e;
+          .orElseThrow(() -> new NotFoundException("Season not found with id: " + seasonId));
     } catch (Exception e) {
-      logger.error("Error getting season with id: {}", seasonId, e);
-      throw e;
+      log.error("Error getting season with id: {}", seasonId, e);
+      throw new RuntimeException("Failed to retrieve season with id: " + seasonId, e);
     }
   }
 
@@ -91,13 +96,13 @@ public class SeasonService {
   @Transactional
   public Integer create(final SeasonDTO seasonDTO) {
     try {
-      logger.info("Creating new season");
+      log.info("Creating new season");
       final Season season = new Season();
       mapToEntity(seasonDTO, season);
       return seasonRepository.save(season).getSeasonId();
     } catch (Exception e) {
-      logger.error("Error creating season", e);
-      throw e;
+      log.error("Error creating season", e);
+      throw new RuntimeException("Failed to create season", e);
     }
   }
 
@@ -110,16 +115,16 @@ public class SeasonService {
   @Transactional
   public void update(final Integer seasonId, final SeasonDTO seasonDTO) {
     try {
-      logger.info("Updating season with id: {}", seasonId);
-      final Season season = seasonRepository.findById(seasonId).orElseThrow(NotFoundException::new);
+      log.info("Updating season with id: {}", seasonId);
+      final Season season =
+          seasonRepository
+              .findById(seasonId)
+              .orElseThrow(() -> new NotFoundException("Season not found with id: " + seasonId));
       mapToEntity(seasonDTO, season);
       seasonRepository.save(season);
-    } catch (NotFoundException e) {
-      logger.warn("Season not found with id: {}", seasonId, e);
-      throw e;
     } catch (Exception e) {
-      logger.error("Error updating season with id: {}", seasonId, e);
-      throw e;
+      log.error("Error updating season with id: {}", seasonId, e);
+      throw new RuntimeException("Failed to update season with id: " + seasonId, e);
     }
   }
 
@@ -131,11 +136,11 @@ public class SeasonService {
   @Transactional
   public void delete(final Integer seasonId) {
     try {
-      logger.info("Deleting season with id: {}", seasonId);
+      log.info("Deleting season with id: {}", seasonId);
       seasonRepository.deleteById(seasonId);
     } catch (Exception e) {
-      logger.error("Error deleting season with id: {}", seasonId, e);
-      throw e;
+      log.error("Error deleting season with id: {}", seasonId, e);
+      throw new RuntimeException("Failed to delete season with id: " + seasonId, e);
     }
   }
 
@@ -178,14 +183,14 @@ public class SeasonService {
   @Transactional
   public void createSeason(String seasonName) {
     try {
-      logger.info("Creating season with name: {}", seasonName);
+      log.info("Creating season with name: {}", seasonName);
       SeasonDTO seasonDTO = new SeasonDTO();
       seasonDTO.setName(seasonName);
       seasonDTO.setStartDate(LocalDate.now());
       create(seasonDTO);
     } catch (Exception e) {
-      logger.error("Error creating season with name: {}", seasonName, e);
-      throw e;
+      log.error("Error creating season with name: {}", seasonName, e);
+      throw new RuntimeException("Failed to create season with name: " + seasonName, e);
     }
   }
 
@@ -197,9 +202,12 @@ public class SeasonService {
    */
   public ReferencedWarning getReferencedWarning(final Integer seasonId) {
     try {
-      logger.info("Retrieving referenced warning for season with id: {}", seasonId);
+      log.info("Retrieving referenced warning for season with id: {}", seasonId);
       final ReferencedWarning referencedWarning = new ReferencedWarning();
-      final Season season = seasonRepository.findById(seasonId).orElseThrow(NotFoundException::new);
+      final Season season =
+          seasonRepository
+              .findById(seasonId)
+              .orElseThrow(() -> new NotFoundException("Season not found with id: " + seasonId));
       final SeasonPlayer seasonSeasonPlayer = seasonPlayerRepository.findFirstBySeason(season);
       if (seasonSeasonPlayer != null) {
         referencedWarning.setKey("season.seasonPlayer.season.referenced");
@@ -214,8 +222,9 @@ public class SeasonService {
       }
       return null;
     } catch (Exception e) {
-      logger.error("Error retrieving referenced warning for season with id: {}", seasonId, e);
-      throw e;
+      log.error("Error retrieving referenced warning for season with id: {}", seasonId, e);
+      throw new RuntimeException(
+          "Failed to retrieve referenced warning for season with id: " + seasonId, e);
     }
   }
 }

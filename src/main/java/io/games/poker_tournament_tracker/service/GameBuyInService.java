@@ -17,9 +17,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Service class for managing Game Buy-Ins.
- */
+/** Service class for managing Game Buy-Ins. */
 @Service
 public class GameBuyInService {
 
@@ -33,28 +31,13 @@ public class GameBuyInService {
   @Autowired private SeasonPlayerService seasonPlayerService;
 
   /**
-   * Constructor for GameBuyInService.
-   *
-   * @param gameBuyInRepository the repository for GameBuyIn entities
-   * @param gameRepository the repository for Game entities
-   * @param seasonPlayerRepository the repository for SeasonPlayer entities
-   */
-  public GameBuyInService(
-      final GameBuyInRepository gameBuyInRepository,
-      final GameRepository gameRepository,
-      final SeasonPlayerRepository seasonPlayerRepository) {
-    this.gameBuyInRepository = gameBuyInRepository;
-    this.gameRepository = gameRepository;
-    this.seasonPlayerRepository = seasonPlayerRepository;
-  }
-
-  /**
    * Retrieves all GameBuyInDTOs.
    *
    * @return a list of GameBuyInDTOs
    */
   public List<GameBuyInDTO> findAll() {
     try {
+      logger.info("Retrieving all game buy-ins");
       final List<GameBuyIn> gameBuyIns = gameBuyInRepository.findAll(Sort.by("gameBuyInId"));
       return gameBuyIns.stream().map(gameBuyIn -> mapToDTO(gameBuyIn, new GameBuyInDTO())).toList();
     } catch (Exception e) {
@@ -71,6 +54,7 @@ public class GameBuyInService {
    */
   public GameBuyInDTO get(final Integer gameBuyInId) {
     try {
+      logger.info("Retrieving game buy-in with id: {}", gameBuyInId);
       return gameBuyInRepository
           .findById(gameBuyInId)
           .map(gameBuyIn -> mapToDTO(gameBuyIn, new GameBuyInDTO()))
@@ -93,6 +77,7 @@ public class GameBuyInService {
   @Transactional
   public Integer create(final GameBuyInDTO gameBuyInDTO) {
     try {
+      logger.info("Creating new game buy-in");
       final GameBuyIn gameBuyIn = new GameBuyIn();
       mapToEntity(gameBuyInDTO, gameBuyIn);
       return gameBuyInRepository.save(gameBuyIn).getGameBuyInId();
@@ -111,6 +96,7 @@ public class GameBuyInService {
   @Transactional
   public void update(final Integer gameBuyInId, final GameBuyInDTO gameBuyInDTO) {
     try {
+      logger.info("Updating game buy-in with id: {}", gameBuyInId);
       final GameBuyIn gameBuyIn =
           gameBuyInRepository.findById(gameBuyInId).orElseThrow(NotFoundException::new);
       mapToEntity(gameBuyInDTO, gameBuyIn);
@@ -132,6 +118,7 @@ public class GameBuyInService {
   @Transactional
   public void delete(final Integer gameBuyInId) {
     try {
+      logger.info("Deleting game buy-in with id: {}", gameBuyInId);
       gameBuyInRepository.deleteById(gameBuyInId);
     } catch (Exception e) {
       logger.error("Error deleting game buy-in with id: {}", gameBuyInId, e);
@@ -193,6 +180,8 @@ public class GameBuyInService {
   @Transactional
   public void createGameBuyIn(int gameNumber, String playerName, double buyInAmount) {
     try {
+      logger.info(
+          "Creating game buy-in for game number: {}, player name: {}", gameNumber, playerName);
       GameBuyInDTO gameBuyInDTO = new GameBuyInDTO();
       gameBuyInDTO.setGame(gameService.getGameId(gameNumber));
       Integer seasonIdByGameNumber = gameService.getSeasonIdByGameNumber(gameNumber);
@@ -202,7 +191,11 @@ public class GameBuyInService {
       gameBuyInDTO.setBuyInAmount(BigDecimal.valueOf(buyInAmount));
       gameBuyInService.create(gameBuyInDTO);
     } catch (Exception e) {
-      logger.error("Error creating game buy-in for game number: {}, player name: {}", gameNumber, playerName, e);
+      logger.error(
+          "Error creating game buy-in for game number: {}, player name: {}",
+          gameNumber,
+          playerName,
+          e);
       throw e;
     }
   }

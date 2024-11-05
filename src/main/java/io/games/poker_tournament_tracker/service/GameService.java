@@ -14,8 +14,7 @@ import io.games.poker_tournament_tracker.repos.SeasonRepository;
 import io.games.poker_tournament_tracker.util.NotFoundException;
 import io.games.poker_tournament_tracker.util.ReferencedWarning;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -23,17 +22,34 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Service class for managing Games. */
 @Service
+@Slf4j
 public class GameService {
 
-  private static final Logger logger = LoggerFactory.getLogger(GameService.class);
+  private final GameRepository gameRepository;
+  private final SeasonRepository seasonRepository;
+  private final GameBuyInRepository gameBuyInRepository;
+  private final GameResultRepository gameResultRepository;
+  private final PlayerParticipationRepository playerParticipationRepository;
+  private final SeasonService seasonService;
+  private final GameService gameService;
 
-  @Autowired private GameRepository gameRepository;
-  @Autowired private SeasonRepository seasonRepository;
-  @Autowired private GameBuyInRepository gameBuyInRepository;
-  @Autowired private GameResultRepository gameResultRepository;
-  @Autowired private PlayerParticipationRepository playerParticipationRepository;
-  @Autowired private SeasonService seasonService;
-  @Autowired private GameService gameService;
+  @Autowired
+  public GameService(
+      GameRepository gameRepository,
+      SeasonRepository seasonRepository,
+      GameBuyInRepository gameBuyInRepository,
+      GameResultRepository gameResultRepository,
+      PlayerParticipationRepository playerParticipationRepository,
+      SeasonService seasonService,
+      GameService gameService) {
+    this.gameRepository = gameRepository;
+    this.seasonRepository = seasonRepository;
+    this.gameBuyInRepository = gameBuyInRepository;
+    this.gameResultRepository = gameResultRepository;
+    this.playerParticipationRepository = playerParticipationRepository;
+    this.seasonService = seasonService;
+    this.gameService = gameService;
+  }
 
   /**
    * Retrieves all GameDTOs.
@@ -42,12 +58,12 @@ public class GameService {
    */
   public List<GameDTO> findAll() {
     try {
-      logger.info("Retrieving all games");
+      log.info("Retrieving all games");
       final List<Game> games = gameRepository.findAll(Sort.by("gameId"));
       return games.stream().map(game -> mapToDTO(game, new GameDTO())).toList();
     } catch (Exception e) {
-      logger.error("Error finding all games", e);
-      throw e;
+      log.error("Error finding all games", e);
+      throw new RuntimeException("Failed to retrieve all games", e);
     }
   }
 
@@ -59,11 +75,11 @@ public class GameService {
    */
   public int getGameId(int gameNumber) {
     try {
-      logger.info("Retrieving game ID for game number: {}", gameNumber);
+      log.info("Retrieving game ID for game number: {}", gameNumber);
       return gameRepository.findGameIdByGameNumber(gameNumber);
     } catch (Exception e) {
-      logger.error("Error retrieving game ID for game number: {}", gameNumber, e);
-      throw e;
+      log.error("Error retrieving game ID for game number: {}", gameNumber, e);
+      throw new RuntimeException("Failed to retrieve game ID for game number: " + gameNumber, e);
     }
   }
 
@@ -75,17 +91,14 @@ public class GameService {
    */
   public GameDTO get(final Integer gameId) {
     try {
-      logger.info("Retrieving game with id: {}", gameId);
+      log.info("Retrieving game with id: {}", gameId);
       return gameRepository
           .findById(gameId)
           .map(game -> mapToDTO(game, new GameDTO()))
-          .orElseThrow(NotFoundException::new);
-    } catch (NotFoundException e) {
-      logger.warn("Game not found with id: {}", gameId, e);
-      throw e;
+          .orElseThrow(() -> new NotFoundException("Game not found with id: " + gameId));
     } catch (Exception e) {
-      logger.error("Error getting game with id: {}", gameId, e);
-      throw e;
+      log.error("Error getting game with id: {}", gameId, e);
+      throw new RuntimeException("Failed to retrieve game with id: " + gameId, e);
     }
   }
 
@@ -98,13 +111,13 @@ public class GameService {
   @Transactional
   public Integer create(final GameDTO gameDTO) {
     try {
-      logger.info("Creating new game");
+      log.info("Creating new game");
       final Game game = new Game();
       mapToEntity(gameDTO, game);
       return gameRepository.save(game).getGameId();
     } catch (Exception e) {
-      logger.error("Error creating game", e);
-      throw e;
+      log.error("Error creating game", e);
+      throw new RuntimeException("Failed to create game", e);
     }
   }
 
@@ -117,16 +130,16 @@ public class GameService {
   @Transactional
   public void update(final Integer gameId, final GameDTO gameDTO) {
     try {
-      logger.info("Updating game with id: {}", gameId);
-      final Game game = gameRepository.findById(gameId).orElseThrow(NotFoundException::new);
+      log.info("Updating game with id: {}", gameId);
+      final Game game =
+          gameRepository
+              .findById(gameId)
+              .orElseThrow(() -> new NotFoundException("Game not found with id: " + gameId));
       mapToEntity(gameDTO, game);
       gameRepository.save(game);
-    } catch (NotFoundException e) {
-      logger.warn("Game not found with id: {}", gameId, e);
-      throw e;
     } catch (Exception e) {
-      logger.error("Error updating game with id: {}", gameId, e);
-      throw e;
+      log.error("Error updating game with id: {}", gameId, e);
+      throw new RuntimeException("Failed to update game with id: " + gameId, e);
     }
   }
 
@@ -138,11 +151,11 @@ public class GameService {
   @Transactional
   public void delete(final Integer gameId) {
     try {
-      logger.info("Deleting game with id: {}", gameId);
+      log.info("Deleting game with id: {}", gameId);
       gameRepository.deleteById(gameId);
     } catch (Exception e) {
-      logger.error("Error deleting game with id: {}", gameId, e);
-      throw e;
+      log.error("Error deleting game with id: {}", gameId, e);
+      throw new RuntimeException("Failed to delete game with id: " + gameId, e);
     }
   }
 
@@ -180,7 +193,9 @@ public class GameService {
             ? null
             : seasonRepository
                 .findById(gameDTO.getSeason())
-                .orElseThrow(() -> new NotFoundException("season not found"));
+                .orElseThrow(
+                    () ->
+                        new NotFoundException("Season not found with id: " + gameDTO.getSeason()));
     game.setSeason(season);
     return game;
   }
@@ -193,15 +208,16 @@ public class GameService {
    */
   public Integer getSeasonIdByGameNumber(int gameNumber) {
     try {
-      logger.info("Retrieving season ID for game number: {}", gameNumber);
+      log.info("Retrieving season ID for game number: {}", gameNumber);
       Game game =
           gameRepository
               .findByGameNumber(gameNumber)
-              .orElseThrow(() -> new NotFoundException("Game not found"));
+              .orElseThrow(
+                  () -> new NotFoundException("Game not found with game number: " + gameNumber));
       return game.getSeason().getSeasonId();
     } catch (Exception e) {
-      logger.error("Error retrieving season ID for game number: {}", gameNumber, e);
-      throw e;
+      log.error("Error retrieving season ID for game number: {}", gameNumber, e);
+      throw new RuntimeException("Failed to retrieve season ID for game number: " + gameNumber, e);
     }
   }
 
@@ -214,15 +230,15 @@ public class GameService {
   @Transactional
   public void createGame(String seasonName, int gameNumber) {
     try {
-      logger.info("Creating game for season: {}, game number: {}", seasonName, gameNumber);
+      log.info("Creating game for season: {}, game number: {}", seasonName, gameNumber);
       GameDTO gamesDTO = new GameDTO();
       gamesDTO.setSeason(seasonService.getSeasonIdByName(seasonName));
       gamesDTO.setGameNumber(gameNumber);
       gameService.create(gamesDTO);
     } catch (Exception e) {
-      logger.error(
-          "Error creating game for season: {}, game number: {}", seasonName, gameNumber, e);
-      throw e;
+      log.error("Error creating game for season: {}, game number: {}", seasonName, gameNumber, e);
+      throw new RuntimeException(
+          "Failed to create game for season: " + seasonName + ", game number: " + gameNumber, e);
     }
   }
 
@@ -234,9 +250,12 @@ public class GameService {
    */
   public ReferencedWarning getReferencedWarning(final Integer gameId) {
     try {
-      logger.info("Retrieving referenced warning for game with id: {}", gameId);
+      log.info("Retrieving referenced warning for game with id: {}", gameId);
       final ReferencedWarning referencedWarning = new ReferencedWarning();
-      final Game game = gameRepository.findById(gameId).orElseThrow(NotFoundException::new);
+      final Game game =
+          gameRepository
+              .findById(gameId)
+              .orElseThrow(() -> new NotFoundException("Game not found with id: " + gameId));
       final GameBuyIn gameGameBuyIn = gameBuyInRepository.findFirstByGame(game);
       if (gameGameBuyIn != null) {
         referencedWarning.setKey("game.gameBuyIn.game.referenced");
@@ -258,8 +277,9 @@ public class GameService {
       }
       return null;
     } catch (Exception e) {
-      logger.error("Error retrieving referenced warning for game with id: {}", gameId, e);
-      throw e;
+      log.error("Error retrieving referenced warning for game with id: {}", gameId, e);
+      throw new RuntimeException(
+          "Failed to retrieve referenced warning for game with id: " + gameId, e);
     }
   }
 }

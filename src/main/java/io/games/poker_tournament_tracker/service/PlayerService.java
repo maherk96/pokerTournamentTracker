@@ -196,7 +196,7 @@ public class PlayerService {
    * @param playerId the ID of the player
    * @return the ReferencedWarning
    */
-    public ReferencedWarning getReferencedWarning(final Integer playerId) {
+  public ReferencedWarning getReferencedWarning(final Integer playerId) {
     try {
       logger.info("Retrieving referenced warning for player with id: {}", playerId);
       final ReferencedWarning referencedWarning = new ReferencedWarning();

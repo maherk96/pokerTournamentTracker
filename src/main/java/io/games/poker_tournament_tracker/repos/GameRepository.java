@@ -1,10 +1,12 @@
 package io.games.poker_tournament_tracker.repos;
 
-import io.games.poker_tournament_tracker.domain.Game;
-import io.games.poker_tournament_tracker.domain.Season;
 import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+
+import io.games.poker_tournament_tracker.domain.Game;
+import io.games.poker_tournament_tracker.domain.Season;
 
 public interface GameRepository extends JpaRepository<Game, Integer> {
 

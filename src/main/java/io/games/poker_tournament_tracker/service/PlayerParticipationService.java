@@ -1,5 +1,12 @@
 package io.games.poker_tournament_tracker.service;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import io.games.poker_tournament_tracker.domain.Game;
 import io.games.poker_tournament_tracker.domain.PlayerParticipation;
 import io.games.poker_tournament_tracker.domain.SeasonPlayer;
@@ -8,12 +15,8 @@ import io.games.poker_tournament_tracker.repos.GameRepository;
 import io.games.poker_tournament_tracker.repos.PlayerParticipationRepository;
 import io.games.poker_tournament_tracker.repos.SeasonPlayerRepository;
 import io.games.poker_tournament_tracker.util.NotFoundException;
-import java.util.List;
+
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /** Service class for managing Player Participations. */
 @Service

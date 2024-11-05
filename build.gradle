@@ -2,36 +2,37 @@ plugins {
     id 'org.springframework.boot' version '3.3.5'
     id 'io.spring.dependency-management' version '1.1.6'
     id 'java'
-    id 'com.diffplug.spotless' version '6.22.0' // Use the latest version available
-}
-
-spotless {
-    java {
-        // Use Google Java Style
-        googleJavaFormat('1.15.0') // Specify version of google-java-format
-
-        // To exclude certain files or directories:
-        // target 'src/**/*.java' // Uncomment and modify to include specific paths
-
-        // Optional: Add custom rules if needed
-        // You can also add license headers, import ordering, etc.
-        // licenseHeaderFile 'path/to/your/license/header.txt'
-    }
-
-    // Configure other formats if necessary, e.g., for Markdown, Gradle, or Kotlin files
-    // format 'misc', {
-    //     target '**/*.md', '**/*.gradle'
-    //     prettier().configFile('.prettierrc')
-    // }
+    id 'com.diffplug.spotless' version '6.22.0'
+    id 'jacoco'
+    id 'org.owasp.dependencycheck' version '7.1.1'
 }
 
 group = 'io.games'
 version = '0.0.1-SNAPSHOT'
 
-java.sourceCompatibility = '17'
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
 
-bootRun {
-    environment SPRING_PROFILES_ACTIVE: environment.SPRING_PROFILES_ACTIVE ?: 'local'
+spotless {
+    java {
+        googleJavaFormat(googleJavaFormatVersion)
+        importOrder('java', 'javax', 'org', 'io')
+    }
+    kotlinGradle {
+        target '**/*.gradle.kts'
+        ktlint().userData(['indent_size': '4'])
+    }
+    format 'misc', {
+        target '**/*.md', '**/*.gradle', '**/*.yaml', '**/*.yml'
+        trimTrailingWhitespace()
+        indentWithSpaces()
+        endWithNewline()
+    }
 }
 
 repositories {
@@ -39,20 +40,55 @@ repositories {
 }
 
 dependencies {
-    implementation('org.springframework.boot:spring-boot-starter-web')
-    implementation('org.springframework.boot:spring-boot-starter-validation')
-    implementation('org.springframework.boot:spring-boot-starter-data-jpa')
-    runtimeOnly('org.postgresql:postgresql')
-    implementation('io.github.wimdeblauwe:error-handling-spring-boot-starter:4.5.0')
-    implementation('org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0')
-    compileOnly('org.projectlombok:lombok')
-    annotationProcessor('org.projectlombok:lombok')
-    testCompileOnly('org.projectlombok:lombok')
-    testAnnotationProcessor('org.projectlombok:lombok')
-    developmentOnly('org.springframework.boot:spring-boot-devtools')
-    testImplementation('org.springframework.boot:spring-boot-starter-test')
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    runtimeOnly 'org.postgresql:postgresql'
+    implementation "io.github.wimdeblauwe:error-handling-spring-boot-starter:${errorHandlingVersion}"
+    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springDocVersion}"
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
+    testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    developmentOnly "org.springframework.boot:spring-boot-devtools"
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
-tasks.withType(Test) {
+bootRun {
+    environment 'SPRING_PROFILES_ACTIVE', project.findProperty('SPRING_PROFILES_ACTIVE') ?: 'local'
+}
+
+tasks.withType(Test).configureEach {
     useJUnitPlatform()
+    maxParallelForks = (Runtime.runtime.availableProcessors() / 2) ?: 1
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+    reports {
+        junitXml.required = true
+        html.required = true
+    }
+    finalizedBy jacocoTestReport
+}
+
+jacoco {
+    toolVersion = "${jacocoVersion}"
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+dependencyCheck {
+    failOnError = false
+    suppressionFiles = ['dependency-check-suppressions.xml']
+    formats = ['HTML', 'XML']
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.incremental = true
 }

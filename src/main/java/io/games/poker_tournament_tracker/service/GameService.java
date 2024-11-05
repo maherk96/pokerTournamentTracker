@@ -1,5 +1,12 @@
 package io.games.poker_tournament_tracker.service;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import io.games.poker_tournament_tracker.domain.Game;
 import io.games.poker_tournament_tracker.domain.GameBuyIn;
 import io.games.poker_tournament_tracker.domain.GameResult;
@@ -13,12 +20,8 @@ import io.games.poker_tournament_tracker.repos.PlayerParticipationRepository;
 import io.games.poker_tournament_tracker.repos.SeasonRepository;
 import io.games.poker_tournament_tracker.util.NotFoundException;
 import io.games.poker_tournament_tracker.util.ReferencedWarning;
-import java.util.List;
+
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /** Service class for managing Games. */
 @Service
@@ -34,11 +37,11 @@ public class GameService {
 
   @Autowired
   public GameService(
-          GameRepository gameRepository,
-          SeasonRepository seasonRepository,
-          GameBuyInRepository gameBuyInRepository,
-          GameResultRepository gameResultRepository,
-          PlayerParticipationRepository playerParticipationRepository) {
+      GameRepository gameRepository,
+      SeasonRepository seasonRepository,
+      GameBuyInRepository gameBuyInRepository,
+      GameResultRepository gameResultRepository,
+      PlayerParticipationRepository playerParticipationRepository) {
     this.gameRepository = gameRepository;
     this.seasonRepository = seasonRepository;
     this.gameBuyInRepository = gameBuyInRepository;

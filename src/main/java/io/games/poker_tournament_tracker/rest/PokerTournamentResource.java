@@ -1,5 +1,6 @@
 package io.games.poker_tournament_tracker.rest;
 
+import io.games.poker_tournament_tracker.service.*;
 import io.games.poker_tournament_tracker.service.impl.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -14,21 +15,21 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(value = "/api/poker/tournament", produces = MediaType.APPLICATION_JSON_VALUE)
 public class PokerTournamentResource {
 
-  @Autowired private PokerSeasonImpl pokerSeasonImpl;
+  @Autowired private SeasonService seasonService;
 
-  @Autowired private PokerSeasonPlayerImpl pokerSeasonPlayerImpl;
+  @Autowired private SeasonPlayerService seasonPlayerService;
 
-  @Autowired private PokerGamesImpl pokerGamesImpl;
+  @Autowired private GameService gameService;
 
-  @Autowired private PokerPlayerParticipationImpl pokerPlayerParticipationImpl;
+  @Autowired private PlayerParticipationService playerParticipationService;
 
-  @Autowired GameBuyInImpl gameBuyInImpl;
+  @Autowired GameBuyInService gameBuyInService;
 
-  @Autowired GameResultsImpl gameResultsImpl;
+  @Autowired GameResultService gameResultService;
 
   @PostMapping("/create-season")
   public ResponseEntity<Void> createSeason(@RequestParam String seasonName) {
-    pokerSeasonImpl.createSeason(seasonName);
+    seasonService.createSeason(seasonName);
     return new ResponseEntity<>(HttpStatus.CREATED);
   }
 
@@ -38,14 +39,14 @@ public class PokerTournamentResource {
       @RequestParam String playerName,
       @RequestParam Double minBuyIn,
       @RequestParam Double allocatedPotSize) {
-    pokerSeasonPlayerImpl.createSeasonPlayers(seasonName, playerName, minBuyIn, allocatedPotSize);
+    seasonPlayerService.createSeasonPlayers(seasonName, playerName, minBuyIn, allocatedPotSize);
     return new ResponseEntity<>(HttpStatus.CREATED);
   }
 
   @PostMapping("/games")
   public ResponseEntity<Void> createGame(
       @RequestParam String seasonName, @RequestParam int gameNumber) {
-    pokerGamesImpl.createGame(seasonName, gameNumber);
+    gameService.createGame(seasonName, gameNumber);
     return new ResponseEntity<>(HttpStatus.CREATED);
   }
 
@@ -54,7 +55,7 @@ public class PokerTournamentResource {
       @RequestParam String playerName,
       @RequestParam PlayerParticipation playerParticipation,
       @RequestParam int gameNumber) {
-    pokerPlayerParticipationImpl.createPlayerParticipation(
+    playerParticipationService.createPlayerParticipation(
         playerName, playerParticipation, gameNumber);
     return new ResponseEntity<>(HttpStatus.CREATED);
   }
@@ -64,7 +65,7 @@ public class PokerTournamentResource {
       @RequestParam int gameNumber,
       @RequestParam String playerName,
       @RequestParam double buyInAmount) {
-    gameBuyInImpl.createGameBuyIn(gameNumber, playerName, buyInAmount);
+    gameBuyInService.createGameBuyIn(gameNumber, playerName, buyInAmount);
     return new ResponseEntity<>(HttpStatus.CREATED);
   }
 
@@ -73,7 +74,7 @@ public class PokerTournamentResource {
       @RequestParam int gameNumber,
       @RequestParam String playerName,
       @RequestParam double winnings) {
-    gameResultsImpl.createGameResult(gameNumber, playerName, winnings);
+    gameResultService.createGameResult(gameNumber, playerName, winnings);
     return new ResponseEntity<>(HttpStatus.CREATED);
   }
 }

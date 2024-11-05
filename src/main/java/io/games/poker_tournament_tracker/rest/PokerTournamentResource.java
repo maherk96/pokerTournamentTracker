@@ -1,7 +1,5 @@
 package io.games.poker_tournament_tracker.rest;
 
-import io.games.poker_tournament_tracker.service.*;
-import io.games.poker_tournament_tracker.service.impl.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -10,6 +8,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import io.games.poker_tournament_tracker.service.*;
+import io.games.poker_tournament_tracker.service.impl.*;
 
 @RestController
 @RequestMapping(value = "/api/poker/tournament", produces = MediaType.APPLICATION_JSON_VALUE)

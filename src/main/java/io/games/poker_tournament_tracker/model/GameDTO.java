@@ -1,7 +1,8 @@
 package io.games.poker_tournament_tracker.model;
 
-import jakarta.validation.constraints.NotNull;
 import java.time.OffsetDateTime;
+
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 

@@ -96,7 +96,6 @@ public class SeasonService {
   @Transactional
   public Integer create(final SeasonDTO seasonDTO) {
     try {
-      log.info("Creating new season");
       final Season season = new Season();
       mapToEntity(seasonDTO, season);
       return seasonRepository.save(season).getSeasonId();

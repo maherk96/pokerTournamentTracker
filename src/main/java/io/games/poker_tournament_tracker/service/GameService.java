@@ -30,25 +30,25 @@ public class GameService {
   private final GameBuyInRepository gameBuyInRepository;
   private final GameResultRepository gameResultRepository;
   private final PlayerParticipationRepository playerParticipationRepository;
-  private final SeasonService seasonService;
-  private final GameService gameService;
+  private SeasonService seasonService;
 
   @Autowired
   public GameService(
-      GameRepository gameRepository,
-      SeasonRepository seasonRepository,
-      GameBuyInRepository gameBuyInRepository,
-      GameResultRepository gameResultRepository,
-      PlayerParticipationRepository playerParticipationRepository,
-      SeasonService seasonService,
-      GameService gameService) {
+          GameRepository gameRepository,
+          SeasonRepository seasonRepository,
+          GameBuyInRepository gameBuyInRepository,
+          GameResultRepository gameResultRepository,
+          PlayerParticipationRepository playerParticipationRepository) {
     this.gameRepository = gameRepository;
     this.seasonRepository = seasonRepository;
     this.gameBuyInRepository = gameBuyInRepository;
     this.gameResultRepository = gameResultRepository;
     this.playerParticipationRepository = playerParticipationRepository;
+  }
+
+  @Autowired
+  public void setSeasonService(SeasonService seasonService) {
     this.seasonService = seasonService;
-    this.gameService = gameService;
   }
 
   /**
@@ -234,7 +234,7 @@ public class GameService {
       GameDTO gamesDTO = new GameDTO();
       gamesDTO.setSeason(seasonService.getSeasonIdByName(seasonName));
       gamesDTO.setGameNumber(gameNumber);
-      gameService.create(gamesDTO);
+      create(gamesDTO);
     } catch (Exception e) {
       log.error("Error creating game for season: {}, game number: {}", seasonName, gameNumber, e);
       throw new RuntimeException(

@@ -39,6 +39,7 @@ public class SeasonPlayerService {
   private final PlayerParticipationRepository playerParticipationRepository;
   private final SeasonService seasonService;
   private final PlayerService playerService;
+  private final GameService gameService;
 
   @Autowired
   public SeasonPlayerService(
@@ -49,7 +50,8 @@ public class SeasonPlayerService {
       GameResultRepository gameResultRepository,
       PlayerParticipationRepository playerParticipationRepository,
       SeasonService seasonService,
-      PlayerService playerService) {
+      PlayerService playerService,
+      GameService gameService) {
     this.seasonPlayerRepository = seasonPlayerRepository;
     this.seasonRepository = seasonRepository;
     this.playerRepository = playerRepository;
@@ -58,6 +60,7 @@ public class SeasonPlayerService {
     this.playerParticipationRepository = playerParticipationRepository;
     this.seasonService = seasonService;
     this.playerService = playerService;
+    this.gameService = gameService;
   }
 
   /**

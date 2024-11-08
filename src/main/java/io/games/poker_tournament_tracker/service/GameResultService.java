@@ -27,6 +27,7 @@ public class GameResultService {
   private final SeasonPlayerRepository seasonPlayerRepository;
   private final GameService gameService;
   private final SeasonPlayerService seasonPlayerService;
+  private final GameBuyInService gameBuyInService;
 
   @Autowired
   public GameResultService(
@@ -34,12 +35,14 @@ public class GameResultService {
       GameRepository gameRepository,
       SeasonPlayerRepository seasonPlayerRepository,
       GameService gameService,
-      SeasonPlayerService seasonPlayerService) {
+      SeasonPlayerService seasonPlayerService,
+      GameBuyInService gameBuyInService) {
     this.gameResultRepository = gameResultRepository;
     this.gameRepository = gameRepository;
     this.seasonPlayerRepository = seasonPlayerRepository;
     this.gameService = gameService;
     this.seasonPlayerService = seasonPlayerService;
+    this.gameBuyInService = gameBuyInService;
   }
 
   /**
@@ -149,6 +152,17 @@ public class GameResultService {
                 .orElseThrow(() -> new NotFoundException("Season player not found")));
   }
 
+  //  public BigDecimal getPlayerCurrentPotSize(String playerName, int gameNumber) {
+  //    SeasonDTO seasonPlayerForGame = seasonPlayerService.getSeasonPlayerForGame(gameNumber);
+  //    seasonPlayerForGame.get
+  //    var seasonId = gameService.getSeasonIdByGameNumber(gameNumber);
+  //    Integer seasonPlayerIdByPlayerNameAndSeasonId =
+  // seasonPlayerService.getSeasonPlayerIdByPlayerNameAndSeasonId(playerName, seasonId);
+  //    SeasonPlayerDTO seasonPlayerDTO =
+  // seasonPlayerService.get(seasonPlayerIdByPlayerNameAndSeasonId);
+  //    return seasonPlayerDTO.getCurrentPotSize();
+  //  }
+
   /**
    * Creates a new GameResult for a specific game and player.
    *
@@ -159,6 +173,19 @@ public class GameResultService {
   @Transactional
   public void createGameResult(int gameNumber, String playerName, double winnings) {
     try {
+      //      var initialBuyIn = gameBuyInService.getTotalBuyInAmountByGameNumber(playerName,
+      // gameNumber);
+      //      var currentPotSize = getPlayerCurrentPotSize(playerName, gameNumber);
+      //
+      //      if (initialBuyIn.isPresent()) {
+      //        var buyIn = initialBuyIn.get();
+      //        if (buyIn.getBuyInAmount().compareTo(BigDecimal.valueOf(winnings)) >= 0) {
+      //
+      //          currentPotSize = currentPotSize.subtract(BigDecimal.valueOf(winnings));
+      //        }
+      //
+      //        }
+
       log.info("Creating game result for game number: {}, player name: {}", gameNumber, playerName);
       GameResultDTO gameResultDTO = new GameResultDTO();
       gameResultDTO.setGame(gameService.getGameId(gameNumber));

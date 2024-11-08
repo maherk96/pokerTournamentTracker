@@ -2,6 +2,7 @@ package io.games.poker_tournament_tracker.service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
@@ -176,5 +177,15 @@ public class GameBuyInService {
           e);
       throw new RuntimeException("Error creating game buy-in", e);
     }
+  }
+  /**
+   * Retrieves the total buy-in amount for a specific game.
+   *
+   * @param gameNumber the number of the game
+   * @return the total buy-in amount
+   */
+  public Optional<GameBuyIn> getTotalBuyInAmountByGameNumber(String playerName, int gameNumber) {
+    log.info("Retrieving total buy-in amount for game number: {}", gameNumber);
+    return gameBuyInRepository.findGameBuyInByPlayerNameAndGameNumber(playerName, gameNumber);
   }
 }
